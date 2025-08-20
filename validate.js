@@ -77,7 +77,7 @@ function validateTask1(result) {
     const checks = [
         { test: result.name === 'Albert', message: 'Name should be Albert' },
         { test: result.position === 'Engineer', message: 'Position should be Engineer' },
-        { test: result.years_of_experience === 2.5, message: 'Experience should be 2.5 years' },
+        { test: parseFloat(result.years_of_experience) === 2.5, message: 'Experience should be 2.5 years' },
         { test: result.salary === 50, message: 'Salary should be $50' }
     ];
     
@@ -115,8 +115,11 @@ function validateTask4(results) {
     
     // Check if sorted by experience descending
     for (let i = 0; i < results.length - 1; i++) {
-        if (results[i].years_of_experience < results[i + 1].years_of_experience) {
+        const currentExp = parseFloat(results[i].years_of_experience);
+        const nextExp = parseFloat(results[i + 1].years_of_experience);
+        if (currentExp < nextExp) {
             console.error('❌ Results should be sorted by experience descending');
+            console.error(`Current: ${currentExp}, Next: ${nextExp}`);
             return false;
         }
     }
@@ -125,7 +128,7 @@ function validateTask4(results) {
 
 function validateTask5(results) {
     const allEngineers = results.every(emp => emp.position === 'Engineer');
-    const allLowExperience = results.every(emp => emp.years_of_experience <= 3);
+    const allLowExperience = results.every(emp => parseFloat(emp.years_of_experience) <= 3);
     
     if (!allEngineers) {
         console.error('❌ All results should be Engineers');

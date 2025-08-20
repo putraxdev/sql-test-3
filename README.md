@@ -97,7 +97,7 @@ docker exec -it sql-test-postgres psql -U admin -d employee_db
 ## 🔍 Database Access
 
 ### Via Adminer (Web Interface)
-- URL: http://localhost:8080
+- URL: http://localhost:8081 (updated port)
 - System: PostgreSQL
 - Server: postgres
 - Username: admin
@@ -108,6 +108,13 @@ docker exec -it sql-test-postgres psql -U admin -d employee_db
 ```bash
 docker exec -it sql-test-postgres psql -U admin -d employee_db
 ```
+
+### Via External Tools (DBeaver, pgAdmin, etc.)
+- Host: localhost
+- Port: 5434 (bukan 5432!)
+- Database: employee_db
+- Username: admin
+- Password: password123
 
 ## 📊 Expected Results
 
@@ -180,12 +187,274 @@ node validate.js
 File `.env` berisi:
 ```
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5434
 DB_NAME=employee_db
 DB_USER=admin
 DB_PASSWORD=password123
 ADMINER_PORT=8080
 ```
+
+## 🐛 Troubleshooting
+
+### ❌ Error: "port is already allocated" (Port 5432 sudah digunakan)
+
+**Problem**: PostgreSQL lokal sudah berjalan di port 5432
+```bash
+ERROR: Bind for 0.0.0.0:5432 failed: port is already allocated
+```
+
+**Solutions:**
+
+#### Solution 1: Gunakan Port Berbeda (Recommended)
+Proyek ini sudah dikonfigurasi menggunakan port 5433 untuk menghindari konflik.
+```bash
+# Check port yang digunakan
+npm run check-ports
+
+# Atau manual check
+netstat -tulpn | grep :5432
+netstat -tulpn | grep :5433
+```
+
+#### Solution 2: Stop PostgreSQL Lokal
+```bash
+# Ubuntu/Debian
+sudo systemctl stop postgresql
+sudo systemctl disable postgresql  # Untuk tidak auto-start
+
+# macOS (Homebrew)
+brew services stop postgresql@15
+
+# Windows
+net stop postgresql-x64-15
+```
+
+#### Solution 3: Ubah Port Manual
+Edit `docker-compose.yml` jika ingin port lain:
+```yaml
+ports:
+  - "5434:5432"  # Ganti ke port yang available
+```
+Dan update `.env`:
+```
+DB_PORT=5434
+```
+
+### ❌ Error: Database Connection Issues
+
+**Problem**: Tidak bisa connect ke database
+```bash
+Error: connect ECONNREFUSED 127.0.0.1:5433
+```
+
+**Solutions:**
+
+#### Check Container Status
+```bash
+# Check if containers are running
+docker-compose ps
+
+# Check logs
+npm run logs
+```
+
+#### Restart Services
+```bash
+# Complete restart
+npm run reset
+
+# Or manual
+docker-compose down
+docker-compose up -d
+```
+
+#### Wait for Database Ready
+Database butuh waktu 10-30 detik untuk siap. Tunggu sampai log menunjukkan:
+```
+database system is ready to accept connections
+```
+
+### ❌ Error: Permission Denied
+
+**Problem**: Docker permission issues (Linux)
+```bash
+permission denied while trying to connect to the Docker daemon socket
+```
+
+**Solution:**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Restart session or run:
+newgrp docker
+
+# Fix file permissions
+sudo chown -R $USER:$USER .
+```
+
+### ❌ Error: Port 8080 (Adminer) sudah digunakan
+
+**Problem**: Adminer tidak bisa start karena port 8080 digunakan
+
+**Solutions:**
+
+#### Check what's using port 8080
+```bash
+netstat -tulpn | grep :8080
+lsof -i :8080
+```
+
+#### Change Adminer port
+Edit `docker-compose.yml`:
+```yaml
+adminer:
+  ports:
+    - "8081:8080"  # Ganti ke port yang available
+```
+
+### ❌ Error: Node.js/NPM Issues
+
+**Problem**: Node modules atau dependency issues
+
+**Solutions:**
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Delete node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Use specific Node version
+nvm use 18  # atau versi yang kompatibel
+```
+
+### ❌ Error: Docker not installed/running
+
+**Problem**: Docker command tidak ditemukan atau tidak berjalan
+
+**Solutions:**
+
+#### Install Docker (Ubuntu/Debian)
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+#### Start Docker Service
+```bash
+# Linux
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Check status
+sudo systemctl status docker
+```
+
+### 🔧 Quick Diagnostic Commands
+
+```bash
+# Check all ports used by this project
+npm run check-ports
+
+# Check Docker status
+docker --version
+docker-compose --version
+docker info
+
+# Check containers
+docker-compose ps
+docker ps -a
+
+# Check logs
+npm run logs
+docker-compose logs
+
+# Check database connectivity
+docker exec -it sql-test-postgres pg_isready -U admin
+
+# Reset everything
+npm run reset
+```
+
+### 📞 Common Error Messages & Solutions
+
+| Error Message | Cause | Solution |
+|---------------|-------|----------|
+| `port is already allocated` | Port 5432/8080 sedang digunakan | Gunakan port berbeda atau stop service yang menggunakan port tersebut |
+| `connect ECONNREFUSED` | Database belum ready atau salah port | Tunggu beberapa detik atau check port di `.env` |
+| `permission denied` | Docker permission issues | Add user ke docker group |
+| `command not found: docker` | Docker belum terinstall | Install Docker dan Docker Compose |
+| `Cannot connect to the Docker daemon` | Docker service tidak berjalan | Start Docker service |
+| `network sql-test-3_default already exists` | Sisa container lama | Run `docker-compose down` dulu |
+
+### 💡 Tips Debugging
+
+1. **Selalu check logs first**: `npm run logs`
+2. **Verify ports**: `npm run check-ports`
+3. **Check container status**: `docker-compose ps`
+4. **Reset when in doubt**: `npm run reset`
+5. **Use external tools**: Connect dengan DBeaver/pgAdmin untuk verify database
+
+### 🆘 Jika Masih Error
+
+1. Jalankan diagnostic commands di atas
+2. Copy paste error message lengkap
+3. Check log file untuk detail error
+4. Pastikan semua prerequisites terinstall dengan benar
+
+### ⚡ Quick Solution for Common Port Conflicts
+
+**Jika mendapat error "port is already allocated":**
+
+1. **Ubah Port Database**:
+   ```bash
+   # Edit docker-compose.yml, ganti port 5434 dengan yang available
+   ports:
+     - "5435:5432"  # contoh port lain
+   
+   # Update .env
+   DB_PORT=5435
+   ```
+
+2. **Ubah Port Adminer**:
+   ```bash
+   # Edit docker-compose.yml
+   ports:
+     - "8082:8080"  # contoh port lain untuk Adminer
+   ```
+
+3. **Reset Complete**:
+   ```bash
+   npm run reset
+   ```
+
+## ✅ Status Proyek
+
+### 🎯 Solusi Final yang Bekerja:
+- ✅ PostgreSQL berjalan di port **5434**
+- ✅ Adminer berjalan di port **8081**
+- ✅ Semua 5 SQL tasks berhasil dijalankan
+- ✅ JavaScript testing berfungsi sempurna
+- ✅ Database terkoneksi dan responsive
+
+### 🔍 Hasil Test:
+- **Task 1**: ✅ Albert berhasil ditambahkan
+- **Task 2**: ✅ Salary Engineer berhasil diupdate ke $85
+- **Task 3**: ✅ Total salary 2021 = $650
+- **Task 4**: ✅ Top 3 experience: Alano (14), John (12), Jacky (8)
+- **Task 5**: ✅ Engineer subquery berfungsi dengan benar
+
+### 🌐 Access URLs:
+- **Database**: localhost:5434
+- **Adminer**: http://localhost:8081
+- **Testing**: `npm test` atau `npm run validate`
 
 ## ✅ Kriteria Penilaian yang Dipenuhi
 
@@ -199,27 +468,7 @@ ADMINER_PORT=8080
 
 ## 🐛 Troubleshooting
 
-### Database Connection Issues
-```bash
-# Check if containers are running
-docker-compose ps
-
-# Restart services
-npm run reset
-```
-
-### Port Conflicts
-Jika port 5432 atau 8080 sudah digunakan, edit `docker-compose.yml`:
-```yaml
-ports:
-  - "5433:5432"  # Ganti ke port yang available
-```
-
-### Permission Issues
-```bash
-# Fix Docker permissions (Linux/Mac)
-sudo chown -R $USER:$USER .
-```
+### ❌ Error: "port is already allocated" (Port 5432 sudah digunakan)
 
 ## 📝 Notes
 

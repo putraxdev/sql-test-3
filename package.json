@@ -13,7 +13,8 @@
     "reset": "docker-compose down -v && docker-compose up -d",
     "setup": "./setup.sh",
     "status": "docker-compose ps",
-    "connect": "docker exec -it sql-test-postgres psql -U admin -d employee_db"
+    "connect": "docker exec -it sql-test-postgres psql -U admin -d employee_db",
+    "check-ports": "netstat -tulpn | grep ':543'"
   },
   "dependencies": {
     "pg": "^8.11.3",

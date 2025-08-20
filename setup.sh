@@ -38,6 +38,24 @@ check_docker() {
     print_success "Docker is running"
 }
 
+# Check for port conflicts
+check_ports() {
+    print_step "Checking for port conflicts"
+    
+    # Check PostgreSQL port 5434
+    if netstat -tulpn 2>/dev/null | grep -q ":5434 "; then
+        print_warning "Port 5434 is already in use. Docker will handle this automatically."
+    fi
+    
+    # Check Adminer port 8080
+    if netstat -tulpn 2>/dev/null | grep -q ":8080 "; then
+        print_warning "Port 8080 is already in use. You may need to change Adminer port."
+        print_warning "Edit docker-compose.yml to use different port for Adminer."
+    fi
+    
+    print_success "Port check completed"
+}
+
 # Check if Node.js is installed
 check_node() {
     if ! command -v node &> /dev/null; then
@@ -77,8 +95,8 @@ show_status() {
     
     echo ""
     print_step "Access Information"
-    echo -e "${GREEN}🌐 Adminer (Database UI): ${NC}http://localhost:8080"
-    echo -e "${GREEN}🗄️  Database: ${NC}localhost:5432"
+    echo -e "${GREEN}🌐 Adminer (Database UI): ${NC}http://localhost:8081"
+    echo -e "${GREEN}🗄️  Database: ${NC}localhost:5434 (not 5432!)"
     echo -e "${GREEN}📊 Database Name: ${NC}employee_db"
     echo -e "${GREEN}👤 Username: ${NC}admin"
     echo -e "${GREEN}🔑 Password: ${NC}password123"
@@ -98,6 +116,7 @@ main() {
     echo "=================================="
     
     check_docker
+    check_ports
     check_node
     install_deps
     start_services
